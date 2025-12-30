@@ -258,7 +258,7 @@ void faultCtrl() {
              last = millis();
              // toggle state
              state = !state;
-             // Turn the LED on or off depending on the state (bool to PinValue)
+             // Turn aboutthe LED on or off depending on the state (bool to PinValue)
              chip.setPin(faultLED, state ? HIGH : LOW);
            }
         } else { delay(50); }
@@ -266,7 +266,8 @@ void faultCtrl() {
 }
 ```
 ---
-You're wondering about millis and delay? Little header helper.
+Millis and delay seen...?
+Little header helper.
 ---
 
 ```
