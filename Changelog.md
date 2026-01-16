@@ -2,6 +2,10 @@
 
 Alle signifikanten Änderungen am gpiodWrapper werden hier dokumentiert.
 
+## [0.1.1] - 2026-01-16
+### fixed
+- GPIOD_LINE_BIAS_DISABLE -> GPIOD_LINE_BIAS_DISABLED
+
 ## [0.1.0] - 2025-11-23/25
 ### Added
 - Erste Version des gpiodWrapper
