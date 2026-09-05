@@ -26,10 +26,9 @@
 
 gpiodWrap gpio(0);
 
-using namespace gpiowrap;
-
-
 int main() {
+  using namespace gpiowrap;
+  
   bool button0 = false;
   bool button1 = false;  
 
