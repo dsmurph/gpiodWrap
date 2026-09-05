@@ -41,6 +41,5 @@ if [[ "$DIR" == "OUTPUT" ]]; then
   done
 
 elif [[ "$DIR" == "INPUT" ]]; then
-echo "$CHIP_DIR/$WATCHPIN"
   watch -n 0.1 "cat $CHIP_DIR/$WATCHPIN"
 fi
