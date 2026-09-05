@@ -289,8 +289,8 @@ void errReport(unsigned long interval = 500) {
        
     if (millis() - last >= interval) {
         last = millis();   
-        state = !state;
         gpio.setPin(errorLED, state ? HIGH : LOW);
+        state = !state;
     }    
 }
 
