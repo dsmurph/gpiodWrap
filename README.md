@@ -125,14 +125,14 @@ int main() {
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap chip(0);
+gpiodWrap gpio(0);
 
 int main() {
     using namespace gpiowrap;
 
-    chip.configurePin(22, INPUT);
+    gpio.configurePin(22, PULLDOWN);
 
-    chip.attachInterrupt(22, RISING, [](int pin) 
+    gpio.attachInterrupt(22, RISING, [](int pin) 
          {std::cout << "Interrupt! Pin: " << pin << std::endl;});
 
     while (true) {
