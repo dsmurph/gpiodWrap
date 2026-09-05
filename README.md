@@ -296,7 +296,7 @@ void errReport(unsigned long interval = 500) {
 
 int main() {
     gpio.configurePin(errorLED, OUTPUT);
-    gpio.setPin(errorLED, HIGH);
+    gpio.setPin(errorLED, LOW);
 
     bool syserror = true;
 
