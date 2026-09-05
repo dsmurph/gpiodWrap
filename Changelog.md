@@ -4,8 +4,9 @@ Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
 ## [1.0.0] - 04.09.2026
 
-> **Vollständiges Refactoring / "Neugeburt" auf libgpiod 2.x API**
-> **Klassenname angepasst gpiodWrapper zu gpiodWrap**
+**Vollständiges Refactoring / "Neugeburt" auf libgpiod 2.x API**
+
+**Klassenname angepasst gpiodWrapper zu gpiodWrap**
 
 ### Added
 - **API-Shortcuts (`namespace gpiowrap`):** Globale Aliase (`INPUT`, `OUTPUT`, `PULLUP`, `HIGH`, `LOW`, `RISING`, `FALLING`, etc.) für eine intuitive, Arduino-nahe Syntax ohne Namenskonflikte oder Makro-Probleme.
