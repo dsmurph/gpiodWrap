@@ -267,7 +267,9 @@ Here's another nice example from a different project where I'm using gpiodWrap.
 #include "gpiodWrap.hpp"
 
 gpiodWrap gpio(0);
-using namespace gpio
+
+using namespace gpiowrap;
+
 int errorLED = 18;
 
 void delay(unsigned long ms) {
