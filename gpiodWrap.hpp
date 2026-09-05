@@ -147,8 +147,13 @@ public:
         unsigned long now = now_ms();
         auto &last_time = debounce_times[id];
         
-        if (last_time == 0 || (now - last_time >= debounce_ms)) {
+        if (last_time == 0) {
             last_time = now;
+            return false;
+        }
+
+        if ((now - last_time >= debounce_ms)) {
+            last_time = 0;
             return true;
         }
         return false;
