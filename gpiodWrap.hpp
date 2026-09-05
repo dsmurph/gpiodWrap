@@ -142,7 +142,7 @@ public:
         }
     }
 
-    bool debouncePin(unsigned long debounce_ms, int id = 0) {
+    bool debouncePin(unsigned int id, unsigned long debounce_ms) {
         std::lock_guard<std::mutex> lock(mtx);
         unsigned long now = now_ms();
         auto &last_time = debounce_times[id];
