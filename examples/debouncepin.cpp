@@ -35,8 +35,8 @@ int main() {
   unsigned long count_16 = 1;
   unsigned long count_17 = 1;
   
-  gpio.configurePin(16, INPUT, FALLING);
-  gpio.configurePin(17, INPUT, FALLING);
+  gpio.configurePin(16, PULLUP);
+  gpio.configurePin(17, PULLUP);
 
   gpio.attachInterrupt(16, FALLING, [&]() {
       if (! button0) std::cout << "gpio16 first falling" << "\n";
