@@ -1,4 +1,4 @@
-# 🚀 gpiodWrapper
+# 🚀 gpiodWrap
 
 A lightweight and user-friendly C++ wrapper for **libgpiod 2.x**, designed to make GPIO access on Linux and Raspberry Pi simple, readable, and intuitive.
 
@@ -10,6 +10,7 @@ configurePin()
 setPin()
 getPin()
 resetPin()
+debouncePin()
 attachInterrupt()
 detachInterrupt()
 
@@ -55,7 +56,8 @@ sudo ldconfig
 
 ✔️ Simple GPIO input/output  
 ✔️ One-line pin configuration  
-✔️ Interrupt support (RISING, FALLING, BOTH)  
+✔️ Interrupt support (RISING, FALLING, BOTH)
+✔️ Non-blocking debouncing function   
 ✔️ Automatic cleanup  
 ✔️ No dynamic memory handling required  
 ✔️ Works with libgpiod 2.x  
@@ -67,11 +69,12 @@ sudo ldconfig
 
 | Function | Description |
 |----------|-------------|
-| `gpiodWrapper(index)` | Opens `/dev/gpiochipX` |
+| `gpiodWrap(index)` | Opens `/dev/gpiochipX` |
 | `configurePin(pin, Output/Input/Pullup/Pulldown)` | Configures pin direction |
 | `setPin(pin, HIGH/LOW)` | Sets pin output state |
 | `getPin(pin)` | Reads digital input |
 | `resetPin(pin)` | Releases pin and clears configuration |
+| `debouncePin()` | Non-blocking debouncing tool for push-buttons, reed switch and sensors |
 | `attachInterrupt(pin, edge, callback)` | Executes function on edge event |
 | `detachInterrupt(pin)` | Stops monitoring interrupt on the pin |
 
@@ -86,28 +89,27 @@ sudo ldconfig
 #include <chrono>
 #include <thread>
 
-#include "gpiodWrapper.hpp"
+#include "gpiodWrap.hpp"
 
 int main() {
     try {
-        // /dev/gpiochip0 open
-        gpiodWrapper chip(0);
-        // Configure pin as output
+    
+        gpiodWrap chip(0);
         chip.configurePin(17, Output);
-        // Turn on LED
+
         chip.setPin(17, HIGH);
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        // // Turn off LED
+    
         chip.setPin(17, LOW);
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        // Unlock PIN (optional)
+  
         chip.resetPin(17);
     }
     catch (const std::exception& e) {
-        std::cerr << "Fehler: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    // Destructor of gpiodWrapper is called automatically
+    // Destructor of gpiodWrap is called automatically
     return 0;
 }
 
@@ -121,22 +123,22 @@ int main() {
 ```cpp
 
 #include <iostream>
+#include <chrono>
 
-#include "gpiodWrapper.hpp"
+#include "gpiodWrap.hpp"
+
+gpiodWrap chip(0);
 
 int main() {
-    // /dev/gpiochip0 open
-    gpiodWrapper chip(0);
 
-    // Configure pin as input
     chip.configurePin(22, Input);
 
-    // Configure pin as interrupt
     chip.attachInterrupt(22, RISING, [](int pin) 
          {std::cout << "Interrupt! Pin: " << pin << std::endl;});
 
     while (true) {
         // Main application loop
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));    
     }
 }
 
@@ -146,6 +148,7 @@ int main() {
 
 📁 examples/
 ```
+ ├── debouncepin.cpp   // Non-blocking debouncing of GPIO signals
  ├── blink.cpp         // Make individual LEDs blink
  ├── taster.cpp        // Query buttons
  ├── pwm.cpp           // PWM-control unit for LEDs or motors
@@ -197,9 +200,9 @@ target_link_libraries(${PROJECT_NAME} gpiod)
 ## 📦 Build Instructions
 
 ```bash
-cd gpiodWrapper-master
+cd gpiodWrap-master
 mkdir src include build
-mv gpiodWrapper.hpp include
+mv gpiodWrap.hpp include
 mv *.cpp src
 cd build
 cmake ..
@@ -207,12 +210,13 @@ make
 ./blink
 ```
 ## 🔧 Your build station looks like this:
-📁 gpiodWrapper/
+📁 gpiodWrap/
 ```
   CMakeLists.txt
   📁 include
-   ├── gpiodWrapper.hpp
+   ├── gpiodWrap.hpp
   📁 src
+   ├── debouncePin.cpp
    ├── blink.cpp
    ├── taster.cpp
    ├── pwm.cpp
@@ -233,37 +237,53 @@ make
 ---
 
 ## 🛠️ Projekt 
-Here's another nice example from a different project where I'm using gpiodWrapper.
+Here's another nice example from a different project where I'm using gpiodWrap.
 
 ```cpp
-#include "time_utils.h"
 
-void faultCtrl() {
-    // /dev/gpiochip0 open
-    gpiodWrapper chip(0);
-    // Configure Pin as Output 
-    chip.configurePin(faultLED, Output);
-    // Turn faultLED off (hardware-related)
-    chip.setPin(faultLED, HIGH);
-    while (true) {
-       //In case of errors
-       if (fault) {
-          // Interval
-          static unsigned long last = 0;
-          // Set toggle variable
-          static bool state = true;
-          // Query timer
-          if (millis() - last >= 500) {
-             // Set Timer 
-             last = millis();
-             // toggle state
-             state = !state;
-             // Turn aboutthe LED on or off depending on the state (bool to PinValue)
-             chip.setPin(faultLED, state ? HIGH : LOW);
-           }
-        } else { delay(50); }
+#include <chrono>
+#include "gpiodWrap.hpp"
+
+gpiodWrap gpio(0);
+
+int errorLED = 18;
+
+void delay(unsigned long ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+unsigned long millis() {
+    using namespace std::chrono;
+    static const auto start = steady_clock::now();
+    return duration_cast<milliseconds>(steady_clock::now() - start).count();
+}
+
+void errReport(unsigned long interval = 500) {
+
+    static unsigned long last = 0;
+    static bool state = true;
+       
+    if (millis() - last >= interval) {
+        last = millis();   
+        state = !state;
+        gpio.setPin(faultLED, state ? HIGH : LOW);
+    }    
+}
+
+int main() {
+    gpio.configurePin(errorLED, Output);
+    gpio.setPin(errorLED, HIGH);
+
+    bool syserror = true;
+
+    while(true) {
+
+        if (syserror) errReport(300);
+
+        delay(20); 
     }
 }
+
 ```
 ---
 Millis and delay seen...?

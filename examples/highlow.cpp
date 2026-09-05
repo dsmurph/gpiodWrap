@@ -1,28 +1,34 @@
 /**
  * @file highlow.cpp
- * @class gpiodWrapper.hpp
+ * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
  * Simplifies GPIO input/output handling on Linux systems using libgpiod.
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
- * @author Kay (dsmurph)
- * @version 0.1.0
- * @date 2025-11-23
+ * @author Kay Donau
+ * @version 1.0.0
+ * @date 04.09.2026
  * @license MIT
  *
  * Requires:
  *  - libgpiod (version 2.x recommended)
  *
- * GitHub: https://github.com/dsmurph/gpiodWrapper
+ * GitHub: https://github.com/dsmurph/gpiodWrap
  */
 
-// Include class gpiodWrapper
-#include "gpiodWrapper.hpp"
+
+#include "gpiodWrap.hpp"
+
+gpiodWrap gpio(0);
+
+using namespace gpiowrap;
 
 int main() {
-    gpiodWrapper chip(0);          // Open
-    chip.configurePin(17, Output); // configure Pin 
-    chip.setPin(17, HIGH);         // Set Pin HIGH
-    chip.setPin(17, LOW);          // Set Pin LOW
+ 
+    gpio.configurePin(17, OUTPUT); // configure Pin 
+    gpio.setPin(17, HIGH);         // Set Pin HIGH
+    gpio.setPin(17, LOW);          // Set Pin LOW
+     
+    return 0:
 }
