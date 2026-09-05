@@ -25,10 +25,9 @@
 
 gpiodWrap gpio(14);
 
-using namespace gpiowrap;
-
 int main() {
-
+    using namespace gpiowrap;
+    
     gpio.configurePin(17, OUTPUT);
     gpio.configurePin(18, INPUT);
 
