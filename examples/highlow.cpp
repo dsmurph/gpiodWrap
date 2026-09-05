@@ -22,9 +22,8 @@
 
 gpiodWrap gpio(0);
 
-using namespace gpiowrap;
-
 int main() {
+    using namespace gpiowrap;
  
     gpio.configurePin(17, OUTPUT); // configure Pin 
     gpio.setPin(17, HIGH);         // Set Pin HIGH
