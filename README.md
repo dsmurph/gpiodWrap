@@ -91,26 +91,24 @@ sudo ldconfig
 
 #include "gpiodWrap.hpp"
 
+gpiodWrap gpio(0);
+
 int main() {
-    try {
     
-        gpiodWrap chip(0);
-        chip.configurePin(17, Output);
-
-        chip.setPin(17, HIGH);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    
-        chip.setPin(17, LOW);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+  using namespace gpiowrap;
   
-        chip.resetPin(17);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
+  gpio.configurePin(17, OUTPUT);
 
-    // Destructor of gpiodWrap is called automatically
-    return 0;
+  gpio.setPin(17, HIGH);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+    
+  gpio.setPin(17, LOW);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  
+  gpio.resetPin(17);
+
+  // Destructor of gpiodWrap is called automatically
+  return 0;
 }
 
 ```
@@ -130,8 +128,9 @@ int main() {
 gpiodWrap chip(0);
 
 int main() {
+    using namespace gpiowrap;
 
-    chip.configurePin(22, Input);
+    chip.configurePin(22, INPUT);
 
     chip.attachInterrupt(22, RISING, [](int pin) 
          {std::cout << "Interrupt! Pin: " << pin << std::endl;});
@@ -165,8 +164,7 @@ int main() {
 ```bash
 sudo apt update
 sudo apt upgrade -y
-sudo apt install build-essential -y
-sudo apt install cmake -y
+sudo apt install build-essential cmake -y
 ```
 ---
 
@@ -175,23 +173,34 @@ sudo apt install cmake -y
 
 CMakeLists.txt (change file.cpp for your project)
 ```cmake
-cmake_minimum_required(VERSION 3.10)
 
-project(your_project VERSION 1.00 LANGUAGES CXX)
+set(SOURCE_NAME YOUR PROJECT NAME)
+
+project(${SOURCE_NAME} VERSION 1.00 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-set(SOURCES
-    ${PROJECT_SOURCE_DIR}/src/your_source_file.cpp
-)
+find_library(GPIOD_LIBRARY gpiod)
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+if(NOT GPIOD_LIBRARY)
+    message(WARNING "libgpiod not found. Skipping '${SOURCE_NAME}'.\n sudo apt install libgpiod-dev")
+else()
+    add_executable(${SOURCE_NAME}
+        src/${SOURCE_NAME}.cpp
+    )
 
-target_link_libraries(${PROJECT_NAME} gpiod)
+    target_link_libraries(${SOURCE_NAME}
+        ${GPIOD_LIBRARY}
+    )
 
+    set_target_properties(${SOURCE_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY
+        ${PROJECT_SOURCE_DIR}/bin/${SOURCE_NAME}
+    )
+endif()
 
 ```
 ---
@@ -200,17 +209,23 @@ target_link_libraries(${PROJECT_NAME} gpiod)
 ## 📦 Build Instructions
 
 ```bash
+
 cd gpiodWrap-master
 mkdir src include build
 mv gpiodWrap.hpp include
-mv *.cpp src
+mv your_project.cpp src
 cd build
 cmake ..
 make
-./blink
+
+cd ../bin/your_project
+./your_project
+
 ```
+
 ## 🔧 Your build station looks like this:
-📁 gpiodWrap/
+📁 gpiodWrap-master/
+
 ```
   CMakeLists.txt
   📁 include
@@ -222,17 +237,24 @@ make
    ├── pwm.cpp
    ├── interrupt.cpp
    ├── highlow.cpp
-   └── LEDTasterPWM.cpp
+   └── combi.cpp
   📁 build
-   ├── blink //your Executable
    ├── ...
+  📁 bin
+   ├── your_project
 
 ```
 
 ## or quickly
 (The files to be compiled are located in one directory!)
+
 ```bash
- g++ blink.cpp -o blink -lgpiod
+ 📁 gpiodWrap-master/
+ ├── gpioWrap.hpp
+ ├── your_project.cpp
+ 
+ g++ your_project.cpp -o your_project -lgpiod
+ 
 ```
 ---
 
@@ -245,7 +267,7 @@ Here's another nice example from a different project where I'm using gpiodWrap.
 #include "gpiodWrap.hpp"
 
 gpiodWrap gpio(0);
-
+using namespace gpio
 int errorLED = 18;
 
 void delay(unsigned long ms) {
@@ -266,20 +288,18 @@ void errReport(unsigned long interval = 500) {
     if (millis() - last >= interval) {
         last = millis();   
         state = !state;
-        gpio.setPin(faultLED, state ? HIGH : LOW);
+        gpio.setPin(errorLED, state ? HIGH : LOW);
     }    
 }
 
 int main() {
-    gpio.configurePin(errorLED, Output);
+    gpio.configurePin(errorLED, OUTPUT);
     gpio.setPin(errorLED, HIGH);
 
     bool syserror = true;
 
     while(true) {
-
         if (syserror) errReport(300);
-
         delay(20); 
     }
 }
@@ -292,9 +312,9 @@ Little header helper.
 
 ```
 
-// time_utils.h ;)
 
 #pragma once
+
 #include <chrono>
 #include <thread>
 
