@@ -216,7 +216,7 @@ endif()
 
 ```bash
 
-cd gpiodWrap-master
+cd gpiodWrap
 mkdir src include build
 mv gpiodWrap.hpp include
 mv your_project.cpp src
@@ -237,6 +237,12 @@ cd ../bin/your_project
   📁 include
    ├── gpiodWrap.hpp
   📁 src
+   ├── your_project.cpp
+  📁 build
+   ├── ...
+  📁 bin
+   ├── your_project
+  📁 examples 
    ├── debouncePin.cpp
    ├── blink.cpp
    ├── taster.cpp
@@ -244,10 +250,6 @@ cd ../bin/your_project
    ├── interrupt.cpp
    ├── highlow.cpp
    └── combi.cpp
-  📁 build
-   ├── ...
-  📁 bin
-   ├── your_project
 
 ```
 
@@ -259,7 +261,7 @@ cd ../bin/your_project
  ├── gpioWrap.hpp
  ├── your_project.cpp
  
- g++ your_project.cpp -o your_project -lgpiod
+ g++ -std=c++17 your_project.cpp -o your_project -lgpiod
  
 ```
 ---
