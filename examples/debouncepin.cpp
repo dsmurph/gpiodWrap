@@ -24,7 +24,7 @@
 
 #include "gpiodWrap.hpp" 
 
-gpiodWrap gpio(0);
+gpiodWrap gpio(14);  //Mockup-Chip
 
 int main() {
   using namespace gpiowrap;
