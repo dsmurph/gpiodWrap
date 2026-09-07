@@ -2,6 +2,17 @@
 
 Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
+## [1.1.0] - 07.09.2026
+
+### Added
+> **`openChip()`:** Neue Methode zum initialisieren des GPIO-Chips. Wird keine Chipnummer eingegeben wir der GPIO-Chip automatisch initialisiert.
+> **`findChip()`:** Diese Funktion findet anhand der Label pinctrl-rp1, rp1-gpio, pinctrl-bcm2712, pinctrl-bcm2835 den richtingen Pfad der Raspberry Pi Boards 1-5 und übergibt ihn an den gpiod_chip_open Prozess.
+> **`Chip Optionen`:** Konstruktor übergabe eines bestimmten GPIO-Chips bleibt erhalten, es kann auch openChip(14); als übergabe genutzt werden und dient zum initialisieren bestimmter GPIO-Chips.
+
+> **`closeChip()`:** Sicheres beenden aller Threads und freigeben der Ressourcen während der Laufzeit. 
+
+---
+ 
 ## [1.0.0] - 04.09.2026
 
 **Vollständiges Refactoring / "Neugeburt" auf libgpiod 2.x API**
