@@ -24,7 +24,7 @@
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio;
 
 int main() {
     using namespace gpiowrap;
