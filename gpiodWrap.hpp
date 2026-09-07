@@ -6,8 +6,8 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @version 1.0.0
- * @date 04.09.2026
+ * @version 1.1.0
+ * @date 07.09.2026
  * @license MIT
  *
  * Requires:
@@ -27,6 +27,8 @@
 #include <functional>
 #include <stdexcept>
 #include <mutex>
+#include <filesystem>
+#include <cstring>
 
 template<typename>
 inline constexpr bool always_false = false;
@@ -38,27 +40,41 @@ public:
     enum class PinValue  { LOW = 0, HIGH = 1 };
     enum class Edge      { RISING, FALLING, BOTH };
 
-    explicit gpiodWrap(int num) {
-        std::string path = "/dev/gpiochip" + std::to_string(num);
-        chip = gpiod_chip_open(path.c_str());
-        if (!chip)
-            throw std::runtime_error("Could not open " + path);
+
+    explicit gpiodWrap(int num = -1) {
+        if (!openChip(num)) throw std::runtime_error("No chip opened!");
     }
 
-    ~gpiodWrap() {
-        stopAllThreads();
+    ~gpiodWrap() { closeChip(); }
+
+
+    // ----------------- Basic functions -----------------
+    
+	bool openChip(int num = -1) {
+		if (chip) closeChip();
+		
+        std::string path = (num == -1) ? findChip() : "/dev/gpiochip" + std::to_string(num);
+		chip = gpiod_chip_open(path.c_str());
+        if (!chip) return false;
+		
+		return true;	
+    }
+
+
+    void closeChip() {
+	    stopAllThreads();
         std::lock_guard<std::mutex> lock(mtx);
         for (auto &p : line) {
             if (p.second) gpiod_line_request_release(p.second);
         }
         line.clear();
 
-        if (chip)
-            gpiod_chip_close(chip);
-    }
+        if (chip) gpiod_chip_close(chip);	
+	}
 
-    // ----------------- Basic functions -----------------
+	
     void configurePin(unsigned int pin, Direction dir, Edge edge = Edge::BOTH) {
+	
         std::lock_guard<std::mutex> lock(mtx);
         if (line.count(pin)) return;
         if (!chip) throw std::runtime_error("No chip opened!");
@@ -120,11 +136,13 @@ public:
         line[pin] = req;
     }
 
+
     void setPin(unsigned int pin, PinValue value) {
         std::lock_guard<std::mutex> lock(mtx);
         checkPinNoLock(pin);
         gpiod_line_request_set_value(line[pin], pin, static_cast<gpiod_line_value>(value));
     }
+
 
     PinValue getPin(unsigned int pin) {
         std::lock_guard<std::mutex> lock(mtx);
@@ -132,6 +150,7 @@ public:
         int val = gpiod_line_request_get_value(line[pin], pin);
         return val ? PinValue::HIGH : PinValue::LOW;
     }
+
 
     void resetPin(unsigned int pin) {
         stopPinThread(pin);
@@ -142,7 +161,8 @@ public:
         }
     }
 
-    bool debouncePin(unsigned int id, unsigned long debounce_ms) {
+
+    bool debouncePin(unsigned int id,unsigned long debounce_ms) {
         std::lock_guard<std::mutex> lock(mtx);
         unsigned long now = now_ms();
         auto &last_time = debounce_times[id];
@@ -156,8 +176,10 @@ public:
             last_time = 0;
             return true;
         }
+
         return false;
     }
+
 
     template <typename Func>
     void attachInterrupt(int pin, Edge edge, Func userCallback) {
@@ -222,11 +244,15 @@ public:
         });
     }
 
+
     void detachInterrupt(int pin) {
         stopPinThread(pin);
     }
 
+
+
     // ----------------- Comfort features -----------------
+ 
     void blinkPin(unsigned int pin, int interval_ms, int times = -1) {
         stopPinThread(pin);
         running[pin] = true;
@@ -242,6 +268,7 @@ public:
         });
         threads[pin] = std::move(t);
     }
+
 
     void pwmPin(unsigned int pin, int percent, int frequency) {
         stopPinThread(pin);
@@ -260,6 +287,7 @@ public:
         threads[pin] = std::move(t);
     }
 
+
     void detachPin(unsigned int pin, PinValue value1, PinValue value2, int interval_ms) {
         stopPinThread(pin);
         running[pin] = true;
@@ -273,6 +301,7 @@ public:
         });
         threads[pin] = std::move(t);
     }
+
 
 private:
     gpiod_chip *chip = nullptr;
@@ -288,11 +317,48 @@ private:
         static const auto start = steady_clock::now();
         return duration_cast<milliseconds>(steady_clock::now() - start).count();
     }
+	
+	
+	std::string findChip() {
+        const char* targets[] = {
+            "pinctrl-rp1",
+            "rp1-gpio",
+            "pinctrl-bcm2712",
+            "pinctrl-bcm2835"
+        };
+
+
+        for (const auto& entry : std::filesystem::directory_iterator("/dev")) {
+            auto name = entry.path().filename().string();
+
+            if (name.rfind("gpiochip", 0) != 0) continue;
+
+            struct gpiod_chip *chip = gpiod_chip_open(entry.path().c_str());
+            if (!chip) continue;
+			
+            struct gpiod_chip_info *info = gpiod_chip_get_info(chip);
+            if (info) {
+			    const char *label = gpiod_chip_info_get_label(info);
+				for (const char* t : targets) {
+                    if (strstr(label, t)) {
+				   		gpiod_chip_info_free(info);
+                        gpiod_chip_close(chip);
+					
+				        return "/dev/" + static_cast<std::string>(name);
+			        }        
+			    }	
+			}	
+            gpiod_chip_close(chip);
+        }
+		return "";
+    }
+
 
     void checkPinNoLock(unsigned int pin) {
         if (!line.count(pin))
             throw std::runtime_error("Pin " + std::to_string(pin) + " not configured");
     }
+
 
     void stopPinThread(unsigned int pin) {
         std::thread t;
@@ -317,6 +383,7 @@ private:
         }
     }
 
+
     void stopAllThreads() {
         std::map<int, std::thread> threads_to_join;
         {
@@ -334,16 +401,18 @@ private:
     }
 };
 
+
+
 namespace gpiowrap {
-    constexpr auto INPUT   = gpiodWrap::Direction::Input;
-    constexpr auto OUTPUT  = gpiodWrap::Direction::Output;
-    constexpr auto PULLUP  = gpiodWrap::Direction::Pullup;
-    constexpr auto PULLDN  = gpiodWrap::Direction::Pulldown;
+    constexpr auto INPUT    = gpiodWrap::Direction::Input;
+    constexpr auto OUTPUT   = gpiodWrap::Direction::Output;
+    constexpr auto PULLUP   = gpiodWrap::Direction::Pullup;
+    constexpr auto PULLDOWN = gpiodWrap::Direction::Pulldown;
 
-    constexpr auto HIGH    = gpiodWrap::PinValue::HIGH;
-    constexpr auto LOW     = gpiodWrap::PinValue::LOW;
+    constexpr auto HIGH     = gpiodWrap::PinValue::HIGH;
+    constexpr auto LOW      = gpiodWrap::PinValue::LOW;
 
-    constexpr auto RISING  = gpiodWrap::Edge::RISING;
-    constexpr auto FALLING = gpiodWrap::Edge::FALLING;
-    constexpr auto BOTH    = gpiodWrap::Edge::BOTH;
-}
+    constexpr auto RISING   = gpiodWrap::Edge::RISING;
+    constexpr auto FALLING  = gpiodWrap::Edge::FALLING;
+    constexpr auto BOTH     = gpiodWrap::Edge::BOTH;
+} //namespace
