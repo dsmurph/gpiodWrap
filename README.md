@@ -5,7 +5,8 @@ A lightweight and user-friendly C++ wrapper for **libgpiod 2.x**, designed to ma
 Instead of complex gpiod structures, this wrapper provides easy functions like:
 
 ```
-
+openChip()
+closeChip()
 configurePin()
 setPin()
 getPin()
@@ -69,7 +70,9 @@ sudo ldconfig
 
 | Function | Description |
 |----------|-------------|
-| `gpiodWrap(index)` | Opens `/dev/gpiochipX` |
+| `gpiodWrap(**index)` | Opens `/dev/gpiochipX` |
+| `openChip(**index)` | Opens `/dev/gpiochipX` |
+| `closeChip()` | Safely terminate all threads and release resources at runtime |
 | `configurePin(pin, Output/Input/Pullup/Pulldown)` | Configures pin direction |
 | `setPin(pin, HIGH/LOW)` | Sets pin output state |
 | `getPin(pin)` | Reads digital input |
@@ -77,6 +80,9 @@ sudo ldconfig
 | `debouncePin()` | Non-blocking debouncing tool for push-buttons, reed switch and sensors |
 | `attachInterrupt(pin, edge, callback)` | Executes function on edge event |
 | `detachInterrupt(pin)` | Stops monitoring interrupt on the pin |
+
+**Optional (Automatically finds the GPIO chip without an index)
+
 
 ---
 
@@ -91,7 +97,7 @@ sudo ldconfig
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio;
 
 int main() {
     
@@ -125,7 +131,7 @@ int main() {
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio(4);
 
 int main() {
     using namespace gpiowrap;
@@ -249,7 +255,7 @@ cd ../bin/your_project
 (The files to be compiled are located in one directory!)
 
 ```bash
- 📁 gpiodWrap-master/
+ 📁 gpiodWrap/
  ├── gpioWrap.hpp
  ├── your_project.cpp
  
@@ -307,31 +313,6 @@ int main() {
 }
 
 ```
----
-Millis and delay seen...?
-Little header helper.
----
-
-```
-
-
-#pragma once
-
-#include <chrono>
-#include <thread>
-
-inline void delay(unsigned long ms) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-}
-
-inline unsigned long millis() {
-    using namespace std::chrono;
-    static const auto start = steady_clock::now();
-    return duration_cast<milliseconds>(steady_clock::now() - start).count();
-}
-
-```
-
 ---
 
 ## 📄 License
