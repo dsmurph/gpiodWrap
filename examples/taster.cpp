@@ -23,7 +23,7 @@
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio;
 
 int gpiopin = 17;
 
