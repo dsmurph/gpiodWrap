@@ -73,7 +73,7 @@ sudo ldconfig
 | `gpiodWrap(**index)` | Opens `/dev/gpiochipX` |
 | `openChip(**index)` | Opens `/dev/gpiochipX` |
 | `closeChip()` | Safely terminate all threads and release resources at runtime |
-| `configurePin(pin, Output/Input/Pullup/Pulldown)` | Configures pin direction |
+| `configurePin(pin, OUTPUT/INPUT/PULLUP/PULLDOWN)` | Configures pin direction |
 | `setPin(pin, HIGH/LOW)` | Sets pin output state |
 | `getPin(pin)` | Reads digital input |
 | `resetPin(pin)` | Releases pin and clears configuration |
