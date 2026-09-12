@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="https://kaiodo.de/images/gw.png" alt="gpiodWrap Logo" width="400">
+  <img src="https://kaiodo.de/images/gw.png" alt="gpiodWrap Logo" width="300">
 </div>
 <br>
-  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="https://kaiodo.de/images/wwy.png" alt="we want you" width="20%" height="20%"></a></div>
+  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="https://kaiodo.de/images/wwy.png" alt="we want you" width="10%" height="10%"></a></div>
 <br>
 
 A lightweight and user-friendly C++ wrapper for **libgpiod 2.x**, designed to make GPIO access on Linux and Raspberry Pi simple, readable, and intuitive.
