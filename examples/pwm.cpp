@@ -7,8 +7,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @version 1.0.0
- * @date 04.09.2026
+ * @date 26.09.2026
  * @license MIT
  *
  * Requires:
@@ -23,17 +22,20 @@
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio;
+
+constexpr int ledPin = 27;
+
 
 int main() {
-    using namespace gpiowrap;
-    
-    gpio.configurePin(17, OUTPUT);
-    gpio.pwmPin(17, 50, 2);
+    using namespace gpiodwrap;
+
+    gpio.configurePin(ledPin, OUTPUT);
+    gpio.softPwm(ledPin, 50, 200); //50% illumination, LEDs at 200 Hz – 800 Hz (Caution: Higher refresh rate means higher cpu load.)
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
-    gpio.resetPin(17);
-  
+    gpio.resetPin(ledPin);
+
     return 0;
 }

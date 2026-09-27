@@ -1,5 +1,5 @@
 /**
- * @file interrupt.cpp
+ * @file example interrupt.cpp
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
@@ -7,8 +7,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @version 1.0.0
- * @date 04.09.2026
+ * @date 26.09.2026
  * @license MIT
  *
  * Requires:
@@ -23,25 +22,43 @@
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio(14);
+
+constexpr int interrupt_pin = 17;
+
+int event_count = 0;
+bool isevent = false;
+
 
 int main() {
-    using namespace gpiowrap;
+    using namespace gpiodwrap;
+
+    gpio.bindInterrupt(interrupt_pin, PULLUP, BOTH, 100);
+
+    std::cout << "Interrupts are active...\n";
     
-    gpio.configurePin(18, INPUT);
-    gpio.attachInterrupt(18, RISING, []() {
-        std::cout << "Button pressed!\n";
+    gpio.watchInterrupt(interrupt_pin, [&](int pin) { 
+        std::cout << event_count <<" event of pin: " << pin << "\n";
+        isevent = true;
     });
 
-    gpio.attachInterrupt(18, FALLING, [](int pin) {
-        std::cout << "Pin " << pin << " has triggered a FALLING event!\n";
-    });
+    while (true) {
 
-    std::cout << "Interrupts are active. Wait 15 seconds....\n";
-    std::this_thread::sleep_for(std::chrono::seconds(15));
+        if (event_count >= 20) {
+            std::cout << "Interrupts test end...\n";
+            break;
+        }
 
-    std::cout << "End interrupts...\n";
-    gpio.detachInterrupt(18);
+        if (isevent) {
+            event_count++;
+            isevent = false;
+        }
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    gpio.unbindInterrupt(interrupt_pin);
+    gpio.resetPin(interrupt_pin);
+    
     return 0;
 }

@@ -1,5 +1,5 @@
 /**
- * @file taster.cpp
+ * @file example led.cpp
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
@@ -7,8 +7,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @version 1.0.0
- * @date 04.09.2026
+ * @date 26.09.2026
  * @license MIT
  *
  * Requires:
@@ -17,29 +16,26 @@
  * GitHub: https://github.com/dsmurph/gpiodWrap
  */
 
-#include <iostream>
 #include <chrono>
 #include <thread>
 
 #include "gpiodWrap.hpp"
 
-gpiodWrap gpio(0);
+gpiodWrap gpio;
 
-int gpiopin = 17;
+constexpr int led = 27;
+
 
 int main() {
-    using namespace gpiowrap;
+    using namespace gpiodwrap;
 
-    gpio.configurePin(gpiopin, PULLUP);
-        
-    gpio.attachInterrupt(gpiopin, FALLING, []() {
-        std::cout << "Button pressed!" << "\n";
-    });
- 
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    gpio.configurePin(led, OUTPUT); // configure Pin
+    
+    while (true) {
+        gpio.setPin(led, HIGH);         // Set Pin HIGH
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    gpio.detachInterrupt(gpiopin);
-    gpio.resetPin(gpiopin);
-  
-    return 0;
+        gpio.setPin(led, LOW);          // Set Pin LOW
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
 }

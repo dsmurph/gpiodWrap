@@ -1,5 +1,5 @@
 /**
- * @file example blink.cpp
+ * @file example button_event.cpp
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
@@ -17,6 +17,7 @@
  */
 
 
+#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -24,16 +25,27 @@
 
 gpiodWrap gpio;
 
-constexpr int led = 27;
-
+constexpr int button = 17;
 
 int main() {
+
     using namespace gpiodwrap;
 
-    gpio.configurePin(led, OUTPUT);
-    gpio.blinkPin(led, 100, 30);
+    gpio.configurePin(button, PULLUP);
 
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    while (true) {
 
-    gpio.resetPin(led);
+        auto event = gpio.getPinEvent(button);
+
+       if (!event)
+           std::cout << "ERROR\n";
+       else if (*event == IS_RISING)
+           std::cout << "RISING\n";
+       else if (*event == IS_FALLING)
+           std::cout << "FALLING\n";
+//     else if (*event == NO_EVENT)
+//        std::cout << "NONE\n";
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 }
