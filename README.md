@@ -66,7 +66,7 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
       <td>Returns outputs to a safe state, releases resources.</td>
     </tr>
     <tr>
-      <td><code>configurePin(pin)</code></td>
+      <td><code>configurePin(pin, direction)</code></td>
       <td>Configured and registered PIN.</td>
     </tr>
     <tr>
