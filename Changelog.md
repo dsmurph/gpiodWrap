@@ -6,8 +6,9 @@ Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
 ## [1.2.0] - 26.09.2026
 
-> Schwerpunkte Thread-Sicherheit, Sicherer Ausgangs-Zustand der Pins, Fehler-Behandung, Event-Behandung
-> CMake-System vereinfachtes erstellen der Beispiele.
+> Schwerpunkte: Thread-Sicherheit, Sicherer Ausgangszustand der Pins, Fehler-Behandlung, Event-Behandung
+> CMake-System: Vereinfachtes erstellen der Beispiele.
+
 
 ### Added
 - getPinEvent(pin, debounce_ms): Liest Pin-Flankenereignisse mit integrierter Software-Entprellung aus und gibt PinEvent (IS_RISING, IS_FALLING, NO_EVENT) zurück.
