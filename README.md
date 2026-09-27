@@ -2,7 +2,7 @@
   <img src="/resources/images/gw.png" alt="gpiodWrap Logo" width="260">
 </div>
 <br>
-  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="/resources/images/wwy.png" alt="we want you" width="12%" height="12%"></a></div>
+  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="/resources/images/wwy.png" alt="we want you" width="14%" height="14%"></a></div>
 <br>
 
 
