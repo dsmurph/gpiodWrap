@@ -479,6 +479,16 @@ int main() {
 }
 
 ```
+---
+
+## 🚨 Hardware Safety & Signal Handling (Safe-by-Default)
+
+An uncontrolled program termination (e.g., via `Ctrl + C` or `SIGTERM`) can be dangerous with hardware controllers if outputs (e.g., for motors, relays, or heating elements) remain in an unsafe state.
+
+Therefore, `gpiodWrap` follows the **Safe-by-Default** principle:
+
+* **Automatic Fail-Safe:**  
+    Upon receiving `SIGINT` or `SIGTERM`, all active output pins are immediately switched to a safe, high-impedance input state (`INPUT`) before the GPIO chip is shut down.
 
 ---
 
