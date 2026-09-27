@@ -1,5 +1,5 @@
 # Changelog gpiodWrap
-# Autor Kay Donau
+Autor Kay Donau
 
 Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
