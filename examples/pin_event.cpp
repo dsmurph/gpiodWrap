@@ -1,4 +1,6 @@
 /**
+ * gpiodWrap is part of Raspino Project
+ *
  * @file example button_event.cpp
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.

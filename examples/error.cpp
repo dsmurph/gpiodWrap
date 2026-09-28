@@ -1,4 +1,6 @@
 /**
+ * gpiodWrap is part of Raspino Project
+ *
  * @file example error.cpp
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
@@ -7,7 +9,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @date 26.09.2026
+ * @date 28.09.2026
  * @license MIT
  *
  * Requires:
@@ -40,45 +42,47 @@ int main() {
         gpio.setPin(gpioPin, LOW);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+
         if (handle_err) {
 
             bool isglobal_err = gpio.anyGlobalError();
             if (isglobal_err) {
-               std::cout << "An global error has occurred!" << std::endl;
+                std::cout << "An global error has occurred!" << std::endl;
 
-               std::string entire = gpio.getErrorStr();
-               if (!entire.empty()) std::cout << "Any global error: " << entire << std::endl;
+                std::string entire = gpio.getStrErr();
+                if (!entire.empty()) std::cout << entire << std::endl;
 
-               int error_num = gpio.getGlobalErrorNum();
-               if (error_num > 0) std::cout << "Global error number: " << error_num << std::endl;
+                int error_num = gpio.getGlobalErrorNum();
+                if (error_num > 0) std::cout << "Global error number: " << error_num << std::endl << std::endl;
 
-               std::string err_with_num = gpio.getErrorStr(error_num);
-               if (!err_with_num.empty()) std::cout << "Global error find with number: " << err_with_num << std::endl;
+                std::cout << "Clear errors!" << std::endl;
+                gpio.clearGlobalErrors();
 
-               std::cout << "Delete errors!" << std::endl;
-               gpio.clearGlobalErrors();
-               std::cout << "Open valid chip!" << std::endl;
-               gpio.openChip(0);
-               gpio.configurePin(gpioPin, OUTPUT);
-               std::cout << "\n";
-               continue;
+                std::cout << "Open valid chip!" << std::endl;
+                gpio.openChip(0);
+                gpio.configurePin(gpioPin, OUTPUT);
+
+                std::cout << std::endl;
+                continue;
             }
 
-           bool ispin_err = gpio.anyPinError(gpioPin);
-           if (ispin_err) {
-               std::cout << "An pin error has occurred!" << std::endl;
 
-               int pin_errnum = gpio.getPinErrorNum(gpioPin);
-               if (pin_errnum > 0) std::cout << "Pin error number: " << pin_errnum << std::endl;
+            bool ispin_err = gpio.anyPinError(gpioPin);
+            if (ispin_err) {
+                std::cout << "An pin error has occurred!" << std::endl;
 
-               std::string pin_err_with_num = gpio.getErrorStr(pin_errnum, gpioPin);
-               if (!pin_err_with_num.empty()) std::cout << "Pin error find with number: " << pin_err_with_num << std::endl;
+                std::string entire = gpio.getStrErrPin(gpioPin);
+                if (!entire.empty()) std::cout << entire << std::endl;
 
-               std::cout << "Delete pin errors!" << std::endl;
+                int pin_errnum = gpio.getPinErrorNum(gpioPin);
+                if (pin_errnum > 0) std::cout << "Pin error number: " << pin_errnum << std::endl << std::endl;
+
+
+               std::cout << "Clear pin errors!" << std::endl;
                gpio.clearPinErrors(gpioPin);
                gpio.resetPin(gpioPin);
 
-               std::cout << "Configure pin new!" << std::endl;
+               std::cout << "Reconfigure pin!" << std::endl;
                gpioPin = 27;
                gpio.configurePin(gpioPin, OUTPUT);
                std::cout << "\n";

@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="/resources/gpiodwrap.png" alt="gpiodWrap Logo" width="260">
+  <img src="/resources/images/gw.png" alt="gpiodWrap Logo" width="260">
 </div>
 <br>
-  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="/resources/wwy.png" alt="we want you" width="15%" height="15%"></a></div>
+  <div align="center"><a href="https://github.com/dsmurph/webpi/blob/main/resources/wwy.md"><img src="/resources/images/wwy.png" alt="we want you" width="14%" height="14%"></a></div>
 <br>
 
 
@@ -66,7 +66,7 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
       <td>Returns outputs to a safe state, releases resources.</td>
     </tr>
     <tr>
-      <td><code>configurePin(pin)</code></td>
+      <td><code>configurePin(pin, direction)</code></td>
       <td>Configured and registered PIN.</td>
     </tr>
     <tr>
@@ -165,25 +165,17 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
 <table width="100%">
   <thead>
     <tr>
-      <th align="left" width="450">Komfort function</th>
+      <th align="left" width="450">Komfort functions</th>
       <th align="left" width="550">Description</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><code>getErrorStr()</code></td>
-      <td>Returns the global system error as text.</td>
+      <td><code>getStrErr()</code></td>
+      <td>Returns error as text.</td>
     </tr>
     <tr>
-      <td><code>getErrorStr(enum)</code></td>
-      <td>Returns specific global errors.</td>
-    </tr>
-    <tr>
-      <td><code>getErrorStr(pin)</code></td>
-      <td>Returns the current error for the specified pin as text.</td>
-    </tr>
-    <tr>
-      <td><code>getErrorStr(enum, pin)</code></td>
+      <td><code>getStrErr(pin)</code></td>
       <td>Returns specific pin errors.</td>
     </tr>
     <tr>
@@ -192,17 +184,17 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
     </tr>
     <tr>
       <td><code>softPwm(pin, percent, frequency)</code></td>
-      <td>Software PWM control LED, BUZZER...</td>
+      <td>Software PWM control LEDs, BUZZER...</td>
     </tr>
     <tr>
       <td><code>detachPin(pin, PinValue, PinValue, interval)</code></td>
-      <td>e.g., status LEDs</td>
+      <td>e.g., status LEDs...</td>
     </tr>
   </tbody>
 </table>
 <br>
 
-Perfect for hobbyists, students, and projects where you just want GPIO control — without becoming a libgpiod expert.
+Perfect for hobbyists, students, and projects where you just want GPIO control without becoming a libgpiod expert.
 
 ---
 
@@ -479,7 +471,25 @@ int main() {
 }
 
 ```
+---
 
+## 🚨 Hardware Safety & Signal Handling (Safe-by-Default)
+
+An uncontrolled program termination (e.g., via `Ctrl + C` or `SIGTERM`) can be dangerous in hardware control applications if outputs (such as those for motors, relays, or heating elements) remain in a unsure state.
+
+`gpiodWrap` therefore adheres to the **Safe-by-Default** principle:
+
+* **Automatic Fail-Safe:**
+    Upon receiving `SIGINT` or `SIGTERM`, all active output pins are immediately switched to a safe, high-impedance input state (`INPUT`) before the GPIO chip is closed.
+
+* **100% Async-Signal-Safe (Self-Pipe Trick):** 
+    Signal handling internally employs the POSIX-compliant *self-pipe* technique in conjunction with `poll()`. No mutex locks or heap allocations occur within the signal handler, thereby eliminating the risk of deadlocks during shutdown.
+
+* **Response Time < 1 ms:**
+    Worker threads for interrupts (`watchInterrupt`) do not get stuck in long timeouts during shutdown; instead, they wake up immediately via the pipe.
+
+* **Disable signal handling** *
+    Signal handling can now be flexibly disabled via the constructor `gpiodWrap(SignalHandling::Disabled)`.
 ---
 
 ## 📄 License

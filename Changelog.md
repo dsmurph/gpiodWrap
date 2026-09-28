@@ -4,10 +4,39 @@
 Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
 
+## [1.2.1] - 29.09.2026
+
+> Die angewandte Methode des Signal-Handlings kann Deadlocks und Crashes verursachen.
+> Der Interrupt-Thread watchInterrupt hängt bis zu 10 Sekunden fest in wait_edge_events und
+  prüft das runFlag erst nach Ablauf der verbleibenden Zeit, was zu unerwarteten verhalten führen kann.
+> Selbst angewendete Handler werden bei dieser Anwendungform gegebenenfalls überschrieben.
+> Das Signal-Handling kann jetzt flexibel über den Konstruktor deaktiviert werden,
+  sodass die volle Kontrolle über das Abfangen von Signalen (wie SIGINT oder SIGTERM)
+  in eigenen Anwendung übernommen werden kann.
+
+### Added
+- gpiodWrap(): Auto Chip / SignalHandling::Enabled
+- gpiodWrap(SignalHandling sh): SignalHandling::Enabled / Disabled (default=Enabled) gedeckelt mit enum class
+- gpiodWrap(pin): Für die spezielle Chip-Auswahl
+- getStrErr(): Text-Ausgabe des ErrorRegisters
+- getStrErrPin(pin): Text-Ausgabe pin fehler 
+
+### Changed
+- getErrorStr(): Wurde komplett neu geschrieben und in getStrErr() bzw. getStrErrPin() umbenannt.
+
+### Fixed
+- Signal-Handling
+- watchInterrupt()
+- signalHandler()
+
+- getPinErrorNum(): return 0;
+
+---
+
 ## [1.2.0] - 26.09.2026
 
-> Schwerpunkte Thread-Sicherheit, Sicherer Ausgangs-Zustand der Pins, Fehler-Behandung, Event-Behandung
-> CMake-System vereinfachtes erstellen der Beispiele.
+> Schwerpunkte: Thread-Sicherheit, Sicherer Ausgangszustand der Pins, Fehler-Behandlung, Event-Behandung
+> CMake-System: Vereinfachtes erstellen der Beispiele.
 
 ### Added
 - getPinEvent(pin, debounce_ms): Liest Pin-Flankenereignisse mit integrierter Software-Entprellung aus und gibt PinEvent (IS_RISING, IS_FALLING, NO_EVENT) zurück.
@@ -110,19 +139,4 @@ Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
 ## [0.1.1] - 16.01.2026
 ### Fixed
-- GPIOD_LINE_BIAS_DISABLE -> GPIOD_LINE_BIAS_DISABLED
-
-
----
-
-
-## [0.1.0] - 23/25.01.2025
-### Added
-- Erste Version des gpiodWrapper
-- Unterstützung für GPIO Pins: setPin, getPin, resetPin, configurePin
-- Interrupt-Handling mit attachInterrupt / detachInterrupt
-- PWM-Funktionalität für LEDs oder Motoren
-- Beispiele: blink.cpp, taster.cpp, pwm.cpp, interrupt.cpp, highlow.cpp, LEDTasterPWM.cpp
-- CMake-Build-System eingerichtet
-- Dokumentation: README.md, Installationsanleitung
-
+- GPIOD_LINE_BIAS_DISABLE -> GPIOD_LINE_BIAS_D

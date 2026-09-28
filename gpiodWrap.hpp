@@ -1,4 +1,6 @@
 /**
+ * gpiodWrap is part of Raspino Project
+ *
  * @class gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
@@ -6,8 +8,8 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @version 1.2.0
- * @date 26.09.2026
+ * @version 1.2.1
+ * @date 28.09.2026
  * @license MIT
  *
  * Requires:
@@ -39,6 +41,9 @@
 #include <bitset>
 #include <queue>
 #include <condition_variable>
+#include <poll.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 
 
@@ -91,24 +96,25 @@ public:
     };
 
 
+    enum class SignalHandling {
+        Disabled = 0,
+        Enabled = 1
+    };
 
-    explicit gpiodWrap(int chip_num = -1) {
 
-        activeInstance = this;
+    explicit gpiodWrap(SignalHandling sh) : gpiodWrap(-1, sh) {}
 
-        openChip(chip_num);
-
-        struct sigaction new_action;
-        new_action.sa_handler = gpiodWrap::signalHandler;
-        sigemptyset(&new_action.sa_mask);
-        new_action.sa_flags = 0;
-
-        sigaction(SIGINT, &new_action, nullptr);
-        sigaction(SIGTERM, &new_action, nullptr);
+    explicit gpiodWrap(int chipNum = -1, SignalHandling sh = SignalHandling::Enabled) : signalHandlingMode_(sh) {
+        
+        if (signalHandlingMode_ == SignalHandling::Enabled) setupSignalHandling();
+        openChip(chipNum);
     }
 
-    ~gpiodWrap() { closeChip(); }
+    ~gpiodWrap() {
 
+        if (signalHandlingMode_ == SignalHandling::Enabled) restoreSignalHandling();
+        closeChip();
+    }
 
 
 /**************************************************************
@@ -342,7 +348,7 @@ public:
         startInterruptWorker();
         auto runFlag = std::make_shared<std::atomic_bool>(true);
 
-       {
+        {
             std::lock_guard<std::mutex> lock(mtx);
 
             auto it = pins.find(pin);
@@ -368,114 +374,139 @@ public:
             debounce.lastEvent = now_ms();
         }
 
-        std::thread t([this, pin, req, requestedEdge, debounceMs, callback, runFlag]() {
-            gpiod_edge_event_buffer* buffer = gpiod_edge_event_buffer_new(16);
+       std::thread t([this, pin, req, requestedEdge, debounceMs, callback, runFlag]() {
+    gpiod_edge_event_buffer* buffer = gpiod_edge_event_buffer_new(16);
 
-            if (!buffer) {
-                setGlobalError(ErrorRegister::SYSTEM_OUT_OF_MEMORY);
+    if (!buffer) {
+        setGlobalError(ErrorRegister::SYSTEM_OUT_OF_MEMORY);
+        return;
+    }
+
+    const int lineFd = gpiod_line_request_get_fd(req);
+    const int sigFd = signalPipeFds[0];
+
+    pollfd fds[2];
+    fds[0].fd = lineFd;
+    fds[0].events = POLLIN;
+    fds[1].fd = sigFd;
+    fds[1].events = POLLIN;
+
+    while (runFlag->load() && !closing.load()) {
+
+        // Poll mit Timeout, damit wir runFlag regelmäßig überprüfen
+        int pollRet = poll(fds, (sigFd >= 0) ? 2 : 1, 100);
+
+        if (!runFlag->load() || closing.load()) break;
+
+        if (pollRet < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+
+        if (pollRet == 0) continue;  // Timeout, weitermachen
+
+        // Signal-Pipe überprüfen (höhere Priorität)
+        if (sigFd >= 0 && (fds[1].revents & POLLIN)) {
+            char byte;
+            while (::read(sigFd, &byte, 1) > 0);  // Pipe leeren
+            break;  // Thread beenden
+        }
+
+        // GPIO-Event verarbeiten
+        if (fds[0].revents & POLLIN) {
+            const int eventCount = gpiod_line_request_read_edge_events(req, buffer, 16);
+
+            if (eventCount < 0) {
+                setPinError(pin, ErrorRegister::PIN_READ_FAILED);
+                continue;
+            }
+
+            for (int i = 0; i < eventCount; ++i) {
+                if (!runFlag->load() || closing.load()) break;
+
+                gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(buffer, i);
+                if (!event) continue;
+
+                const auto eventType = gpiod_edge_event_get_event_type(event);
+
+                bool candidateLevel = false;
+                if (eventType == GPIOD_EDGE_EVENT_RISING_EDGE) candidateLevel = true;
+                else if (eventType == GPIOD_EDGE_EVENT_FALLING_EDGE) candidateLevel = false;
+                else continue;
+
+                if (debounceMs > 0) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(debounceMs));
+                }
+
+                if (!runFlag->load() || closing.load()) break;
+
+                bool trigger = false;
+                std::uint64_t timestamp = now_ms();
+
+                {
+                    std::lock_guard<std::mutex> lock(mtx);
+
+                    auto it = pins.find(pin);
+                    if (it == pins.end()) break;
+
+                    auto currentLevel = readPinLocked(pin);
+
+                    if (!currentLevel.has_value()) {
+                        setPinError(pin, ErrorRegister::PIN_READ_FAILED);
+                        continue;
+                    }
+
+                    if (currentLevel.value() != candidateLevel) continue;
+
+                    auto& debounce = it->second.interruptDebounce;
+
+                    if (!debounce.initialized) {
+                        debounce.initialized = true;
+                        debounce.stableValue = currentLevel.value();
+                        debounce.currentValue = currentLevel.value();
+                        debounce.lastEvent = timestamp;
+                        continue;
+                    }
+
+                    if (debounce.stableValue == currentLevel.value()) continue;
+
+                    debounce.currentValue = currentLevel.value();
+                    debounce.stableValue = currentLevel.value();
+                    debounce.lastEvent = timestamp;
+
+                    if (requestedEdge == Edge::BOTH) trigger = true;
+                    else if (requestedEdge == Edge::RISING && currentLevel.value()) trigger = true;
+                    else if (requestedEdge == Edge::FALLING && !currentLevel.value()) trigger = true;
+                }
+
+                if (!trigger) continue;
+
+                {
+                    std::lock_guard<std::mutex> lock(interruptQueueMtx);
+                    interruptQueue.push(InterruptEvent{ pin, timestamp, callback });
+                }
+
+                interruptCv.notify_one();
+            }
+        }
+    }
+
+    gpiod_edge_event_buffer_free(buffer);
+});
+
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+
+            auto it = pins.find(pin);
+            if (it == pins.end()) {
+                setPinError(pin, ErrorRegister::PIN_INVALID);
+                runFlag->store(false);
                 return;
             }
 
-            while (runFlag->load()) {
-                const int waitResult = gpiod_line_request_wait_edge_events(req, 10'000'000ULL);
-
-                if (!runFlag->load()) break;
-                if (waitResult <= 0) continue;
-
-                const int eventCount = gpiod_line_request_read_edge_events(req, buffer, 16);
-
-                if (eventCount < 0) {
-                    setPinError(pin, ErrorRegister::PIN_READ_FAILED);
-                    continue;
-                }
-
-                for (int i = 0; i < eventCount; ++i) {
-                    if (!runFlag->load()) break;
-
-                    gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(buffer, i);
-
-                    if (!event) continue;
-
-
-                    const auto eventType = gpiod_edge_event_get_event_type(event);
-
-                    bool candidateLevel = false;
-
-                    if (eventType == GPIOD_EDGE_EVENT_RISING_EDGE) candidateLevel = true;
-                    else if (eventType == GPIOD_EDGE_EVENT_FALLING_EDGE) candidateLevel = false;
-                    else continue;
-
-                    if (debounceMs > 0) std::this_thread::sleep_for(std::chrono::milliseconds(debounceMs));
-
-                    if (!runFlag->load()) break;
-
-                    bool trigger = false;
-                    std::uint64_t timestamp = now_ms();
-
-                    {
-                        std::lock_guard<std::mutex> lock(mtx);
-
-                        auto it = pins.find(pin);
-                        if (it == pins.end()) break;
-
-                        auto currentLevel = readPinLocked(pin);
-
-                        if (!currentLevel.has_value()) {
-                            setPinError(pin, ErrorRegister::PIN_READ_FAILED);
-                            continue;
-                        }
-
-                        if (currentLevel.value() != candidateLevel) continue;
-
-                        auto& debounce = it->second.interruptDebounce;
-
-                        if (!debounce.initialized) {
-                            debounce.initialized = true;
-                            debounce.stableValue = currentLevel.value();
-                            debounce.currentValue = currentLevel.value();
-                            debounce.lastEvent = timestamp;
-                            continue;
-                        }
-
-                        if ( debounce.stableValue == currentLevel.value()) continue;
-
-                        debounce.currentValue = currentLevel.value();
-                        debounce.stableValue =currentLevel.value();
-                        debounce.lastEvent = timestamp;
-
-                        if (requestedEdge == Edge::BOTH) trigger = true;
-                        else if (requestedEdge == Edge::RISING && currentLevel.value()) trigger = true;
-                        else if (requestedEdge == Edge::FALLING && !currentLevel.value()) trigger = true;
-
-                    }
-
-                    if (!trigger) continue;
- 
-                    {
-                        std::lock_guard<std::mutex> lock(interruptQueueMtx);
-                        interruptQueue.push(InterruptEvent{ pin,timestamp,callback });
-                    }
-
-                    interruptCv.notify_one();
-                }
-            }
-            gpiod_edge_event_buffer_free(buffer);
+            it->second.thread = std::move(t);
         }
-    );
-
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-
-        auto it = pins.find(pin);
-        if (it == pins.end()) {
-            setPinError(pin, ErrorRegister::PIN_INVALID);
-            runFlag->store(false);
-            return;
-        }
-
-        it->second.thread = std::move(t);
     }
-}
 
 
     void unbindInterrupt(int pin) {
@@ -587,41 +618,70 @@ public:
 *
 **************************************************************/
 
-    std::string getErrorStr(int pin = -1) const {
+    std::string getStrErr() const {
         std::lock_guard<std::mutex> lock(errorMtx);
 
-        if (pin > -1) {
-            unsigned int upin = static_cast<unsigned int>(pin);
-            auto it = pinErrors_.find(upin);
-            if (it != pinErrors_.end()) {
-                for (size_t i = 0; i < it->second.size(); ++i) {
-                    if (it->second.test(i))
-                        if (pinErrors_.at(upin).test(i)) return strError(static_cast<uint8_t>(i));
+        bool hasGlobalErr = globalErrors_.any();
+        bool hasPinErr = false;
+        for (const auto& [pin, errBitset] : pinErrors_) {
+            if (errBitset.any()) {
+                hasPinErr = true;
+                break;
+            }
+        }
+
+        if (!hasGlobalErr && !hasPinErr) return strError(static_cast<uint8_t>(ErrorRegister::NO_ERRORS));
+
+        std::string result;
+
+        if (hasGlobalErr) {
+            result += "[GLOBAL ERRORS]:\n";
+            for (size_t i = 0; i < globalErrors_.size(); ++i) {
+                if (globalErrors_.test(i)) {
+                    result += "  - " + strError(static_cast<uint8_t>(i)) + "\n";
                 }
             }
         }
 
-        for (size_t i = 0; i < globalErrors_.size(); ++i) {
-            if (globalErrors_.test(i)) return strError(static_cast<uint8_t>(i));
+        if (hasPinErr) {
+            if (!result.empty()) result += "\n";
+            result += "[PIN ERRORS]:\n";
+        
+            for (const auto& [pin, errBitset] : pinErrors_) {
+                if (errBitset.none()) continue;
+
+                //result += "  Pin " + std::to_string(pin) + ":\n";
+                for (size_t i = 0; i < errBitset.size(); ++i) {
+                    if (errBitset.test(i)) result += "  - " + strError(static_cast<uint8_t>(i), pin) + "\n";
+                }
+            }
         }
 
-        return strError(static_cast<uint8_t>(ErrorRegister::NO_ERRORS));
+        return result;
     }
 
 
-    std::string getErrorStr(unsigned int num, int pin = -1) const {
+    std::string getStrErrPin(unsigned int pin) const {
         std::lock_guard<std::mutex> lock(errorMtx);
 
-        if (pin > -1) {
-            unsigned int upin = static_cast<unsigned int>(pin);
-            auto it = pinErrors_.find(upin);
-            if (it != pinErrors_.end())
-                if (pinErrors_.at(upin).test(num)) return strError(static_cast<uint8_t>(num));
+        std::string result;
+
+        for (size_t i = 0; i < globalErrors_.size(); ++i) {
+            if (globalErrors_.test(i)) result += "[Global] " + strError(static_cast<uint8_t>(i)) + "\n";
         }
 
-        if (globalErrors_.test(num)) return strError(static_cast<uint8_t>(num));
+        auto it = pinErrors_.find(pin);
+        if (it != pinErrors_.end()) {
+            for (size_t i = 0; i < it->second.size(); ++i) {
+                if (it->second.test(i)) {
+                    result += "[Pin " + std::to_string(pin) + "] " + strError(static_cast<uint8_t>(i), pin) + "\n";
+                }
+            }
+        }
 
-        return strError(static_cast<uint8_t>(ErrorRegister::NO_ERRORS));
+        if (result.empty()) return strError(static_cast<uint8_t>(ErrorRegister::NO_ERRORS));
+
+        return result;
     }
 
 
@@ -834,6 +894,10 @@ private:
     std::atomic_bool interruptWorkerRunning{false};
     std::thread interruptWorker;
 
+    SignalHandling signalHandlingMode_ = SignalHandling::Disabled;
+    struct sigaction oldSigInt_ {};
+    struct sigaction oldSigTerm_ {};
+    inline static int signalPipeFds[2] = {-1, -1};
 
 
     unsigned long now_ms() {
@@ -1080,7 +1144,6 @@ private:
     }
 
 
-
     void startInterruptWorker() {
         if (interruptWorkerRunning.exchange(true)) return;
 
@@ -1124,44 +1187,70 @@ private:
     }
 
 
-    constexpr const char* strError(uint8_t num) const {
+    std::string strError(uint8_t num, int pin = -1) const {
+        std::string output_str = "";
+        std::string pin_num = "";
+
+        if (pin >= 0) pin_num = std::to_string(pin) + " ";
+
         switch (static_cast<ErrorRegister>(num)) {
-            case ErrorRegister::NO_ERRORS:              return "No errors";
-            case ErrorRegister::PERMISSION_DENIED:      return "Access to resources denied";
-            case ErrorRegister::SYSTEM_OUT_OF_MEMORY:   return "No memory reserved for event buffer or threads";
-            case ErrorRegister::KERNEL_BUFFER_OVERFLOW: return "Event buffer overflow";
-            case ErrorRegister::HARDWARE_LOST:          return "Hardware has occurred";
-            case ErrorRegister::INVALID_ARGUMENT:       return "Incorrect arguments";
-            case ErrorRegister::CHIP_NOT_FOUND:         return "Chip not found";
-            case ErrorRegister::CHIP_NOT_OPEN:          return "Chip not open";
-            case ErrorRegister::NO_CHIP_OPEN:           return "No chip open";
-            case ErrorRegister::PIN_ALREADY_LOCKED:     return "Pin is already configured";
-            case ErrorRegister::PIN_INVALID:            return "Pin is not configured";
-            case ErrorRegister::PIN_READ_FAILED:        return "Read pin failed";
-            case ErrorRegister::PIN_WRITE_FAILED:       return "Write pin failed";
-            case ErrorRegister::REQUEST_FAILED:         return "Line request failed";
+            case ErrorRegister::NO_ERRORS:              output_str = "No errors"; break;
+            case ErrorRegister::PERMISSION_DENIED:      output_str = "Access to resources denied"; break;
+            case ErrorRegister::SYSTEM_OUT_OF_MEMORY:   output_str = "No memory reserved for event buffer or threads"; break;
+            case ErrorRegister::KERNEL_BUFFER_OVERFLOW: output_str = "Event buffer overflow"; break;
+            case ErrorRegister::HARDWARE_LOST:          output_str = "Hardware has occurred"; break;
+            case ErrorRegister::INVALID_ARGUMENT:       output_str = "Incorrect arguments"; break;
+            case ErrorRegister::CHIP_NOT_FOUND:         output_str = "Chip not found"; break;
+            case ErrorRegister::CHIP_NOT_OPEN:          output_str = "Chip not open"; break;
+            case ErrorRegister::NO_CHIP_OPEN:           output_str = "No chip open"; break;
+            case ErrorRegister::PIN_ALREADY_LOCKED:     output_str = "Pin " + pin_num + "is already configured"; break;
+            case ErrorRegister::PIN_INVALID:            output_str = "Pin " + pin_num + "is not configured"; break;
+            case ErrorRegister::PIN_READ_FAILED:        output_str = "Read pin " + pin_num + "failed"; break;
+            case ErrorRegister::PIN_WRITE_FAILED:       output_str = "Write pin " + pin_num + "failed"; break;
+            case ErrorRegister::REQUEST_FAILED:         output_str = "Line request for pin " + pin_num + "failed"; break;
+            default: output_str = "Unknown error"; break;
 
         }
-        return "Unknown error";
+
+        return output_str;
     }
 
 
-    static gpiodWrap& getInstance() {
-        static gpiodWrap instance;
-        return instance;
+
+    static void initSignalPipe() {
+        if (signalPipeFds[0] == -1) {
+            if (::pipe(signalPipeFds) == 0) {
+                ::fcntl(signalPipeFds[0], F_SETFL, O_NONBLOCK);
+                ::fcntl(signalPipeFds[1], F_SETFL, O_NONBLOCK);
+            }
+        }
     }
 
 
     static void signalHandler(int signum) {
-        if (activeInstance) activeInstance->closeChip();
+        if (signalPipeFds[1] != -1) {
+            char sig = static_cast<char>(signum);
+            [[maybe_unused]] auto dummy = ::write(signalPipeFds[1], &sig, 1);
+        }
+    }
 
-        struct sigaction default_action;
-        default_action.sa_handler = SIG_DFL;
-        sigemptyset(&default_action.sa_mask);
-        default_action.sa_flags = 0;
-        sigaction(signum, &default_action, nullptr);
 
-        std::raise(signum);
+    void setupSignalHandling() {
+        initSignalPipe();
+
+        struct sigaction sa {};
+        sa.sa_handler = &gpiodWrap::signalHandler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+
+        ::sigaction(SIGINT, &sa, &oldSigInt_);
+        ::sigaction(SIGTERM, &sa, &oldSigTerm_);
+    }
+
+
+    void restoreSignalHandling() {
+        ::sigaction(SIGINT, &oldSigInt_, nullptr);
+        ::sigaction(SIGTERM, &oldSigTerm_, nullptr);
     }
 
 };
