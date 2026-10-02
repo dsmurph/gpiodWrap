@@ -9,7 +9,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @date 26.09.2026
+ * @date 01.10.2026
  * @license MIT
  *
  * Requires:
@@ -28,14 +28,40 @@ gpiodWrap gpio(14);
 
 constexpr int test_pin = 17;
 
-int max_events = 40;
+
 int event_count = 1;
 bool isevent = false;
+bool first_event = false;
+unsigned long last_time = 0;
+
+
+unsigned long now_ms() {
+    using namespace std::chrono;
+    static const auto start = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start
+    ).count();
+}
+
+
+// Ends the test when no more events occur.
+bool watchdog(unsigned long interval) {
+    unsigned long now = now_ms();
+
+    if (last_time == 0) last_time = now;
+
+    if (now - last_time >= interval) {
+        last_time = 0;
+        return true;
+    }
+    return false;
+}
+
 
 int main() {
     using namespace gpiodwrap;
 
-    gpio.bindInterrupt(test_pin, PULLUP, FALLING, 60);
+    gpio.bindInterrupt(test_pin, PULLUP, FALLING, 80);
 
     std::cout << "Interrupt are active, start test...\n";
     
@@ -46,14 +72,18 @@ int main() {
 
     while (true) {
 
-        if (event_count >= max_events) {
-            std::cout << "Interrupt test end...\n";
-            break;
+        if (first_event) {
+            if (watchdog(1000)) {
+                std::cout << "Interrupt test end...\n";
+                break;
+            }
         }
 
         if (isevent) {
             event_count++;
             isevent = false;
+            last_time = 0;
+            first_event = true;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));

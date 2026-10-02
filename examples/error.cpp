@@ -9,7 +9,7 @@
  * Supports basic operations such as set/get, toggling, and automatic cleanup.
  *
  * @author Kay Donau
- * @date 28.09.2026
+ * @date 01.10.2026
  * @license MIT
  *
  * Requires:
@@ -18,6 +18,8 @@
  * GitHub: https://github.com/dsmurph/gpiodWrap
  */
 
+
+#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -82,10 +84,10 @@ int main() {
                gpio.clearPinErrors(gpioPin);
                gpio.resetPin(gpioPin);
 
-               std::cout << "Reconfigure pin!" << std::endl;
-               gpioPin = 27;
+               std::cout << "Reconfigure pin to valid number 17!" << std::endl;
+               gpioPin = 17;
                gpio.configurePin(gpioPin, OUTPUT);
-               std::cout << "\n";
+               std::cout << "Is the LED flashing?\n";
                continue;
             }
         }

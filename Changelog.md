@@ -4,12 +4,24 @@
 Alle signifikanten Änderungen am gpiodWrap werden hier dokumentiert.
 
 
+## [1.2.2] - 01.10.2026
+
+> Umstellung des Signal-Handlings auf konform POSIX "asynchronous signal safety",
+  keine Deadlocks, Datenbeschädigung oder undefiniertes Verhalten.
+
+> Das Signal-Handling kann vor dem kompilieren deaktivieren werden,
+  näheres dazu in steht in der Readme und Diskussionen zu gpiodWrap-1.2.2
+
+### Fixed
+- setupSignalHandling() Übernimmt das Handling und startet den watchdog thread 
+- gpiodWrap()           Signalabschaltung wird nicht mehr benötigt 
+- getPinErrorNum()      Rückgabe-Fehler 
+- watchInterrupt()      Wertet jetzt pin-value aus und gibt den gewünschten edge zurück.
+
+---
+
 ## [1.2.1] - 29.09.2026
 
-> Die angewandte Methode des Signal-Handlings kann Deadlocks und Crashes verursachen.
-> Der Interrupt-Thread watchInterrupt hängt bis zu 10 Sekunden fest in wait_edge_events und
-  prüft das runFlag erst nach Ablauf der verbleibenden Zeit, was zu unerwarteten verhalten führen kann.
-> Selbst angewendete Handler werden bei dieser Anwendungform gegebenenfalls überschrieben.
 > Das Signal-Handling kann jetzt flexibel über den Konstruktor deaktiviert werden,
   sodass die volle Kontrolle über das Abfangen von Signalen (wie SIGINT oder SIGTERM)
   in eigenen Anwendung übernommen werden kann.

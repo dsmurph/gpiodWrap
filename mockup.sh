@@ -14,7 +14,7 @@
 #   sudo ./mockup.sh
 #
 # Dieses Skript liefert insgesamt 140 logische Flanken-Events und simuliert verschiedene Prellzeiten,
-# zum Beispiel mit 60-100ms debounce falling oder rising im Test-Programm 10+-1 gültige Tasten-Events.
+# Im Testprogramm mit 60-100ms debounce falling oder rising 13 und both 26 gültige Tasten-Events.
 #
 
 
@@ -80,7 +80,7 @@ simulate_button_press() {
 
 
 echo ""
-echo "=== Test 1: Idealer Button (kein Prellen) ==="
+echo "=== Test 1: Idealer Button ==="
 set_pin $TEST_PIN 1
 sleep_ms 100
 set_pin $TEST_PIN 0

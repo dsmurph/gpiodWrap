@@ -175,7 +175,7 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
       <td>Returns error as text.</td>
     </tr>
     <tr>
-      <td><code>getStrErr(pin)</code></td>
+      <td><code>getStrErrPin(pin)</code></td>
       <td>Returns specific pin errors.</td>
     </tr>
     <tr>
@@ -184,7 +184,7 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
     </tr>
     <tr>
       <td><code>softPwm(pin, percent, frequency)</code></td>
-      <td>Software PWM control LEDs, BUZZER...</td>
+      <td>Dynamic Software PWM control LEDs, BUZZER...</td>
     </tr>
     <tr>
       <td><code>detachPin(pin, PinValue, PinValue, interval)</code></td>
@@ -473,24 +473,50 @@ int main() {
 ```
 ---
 
+
 ## 🚨 Hardware Safety & Signal Handling (Safe-by-Default)
 
-An uncontrolled program termination (e.g., via `Ctrl + C` or `SIGTERM`) can be dangerous in hardware control applications if outputs (such as those for motors, relays, or heating elements) remain in a unsure state.
+Uncontrolled program termination (e.g., via `Ctrl + C` / `SIGINT or SIGTERM`) can be hazardous in hardware control applications if outputs connected to motors, relays, or heating elements remain active in an undefined state.
 
-`gpiodWrap` therefore adheres to the **Safe-by-Default** principle:
+`gpiodWrap` addresses this by adhering to the **Safe-by-Default** principle:
 
 * **Automatic Fail-Safe:**
-    Upon receiving `SIGINT` or `SIGTERM`, all active output pins are immediately switched to a safe, high-impedance input state (`INPUT`) before the GPIO chip is closed.
 
-* **100% Async-Signal-Safe (Self-Pipe Trick):** 
-    Signal handling internally employs the POSIX-compliant *self-pipe* technique in conjunction with `poll()`. No mutex locks or heap allocations occur within the signal handler, thereby eliminating the risk of deadlocks during shutdown.
+    Upon receiving `SIGINT or SIGTERM`, all active output pins are automatically reverted to a safe, high-impedance input state (`INPUT`) before the GPIO chip is released.
 
-* **Response Time < 1 ms:**
-    Worker threads for interrupts (`watchInterrupt`) do not get stuck in long timeouts during shutdown; instead, they wake up immediately via the pipe.
+* **Decoupled Watchdog Thread:**
 
-* **Disable signal handling** *
-    Signal handling can now be flexibly disabled via the constructor `gpiodWrap(SignalHandling::Disabled)`.
+    The POSIX signal handler exclusively modifies atomic flags (100% `async-signal-safe`). Hardware cleanup is executed asynchronously in a separate watchdog thread—completely free from C library locks or deadlock risks.
+
+* **Optional Compile-Time Disabling:**
+
+     If your application logic manages signal handling independently, the built-in signal mechanism can be disabled entirely with zero runtime overhead:
+
+1. In C++ Source Code:
+```
+#define GPIODWRAP_NO_SIGNALS
+#include "gpiodWrap.hpp"
+```
+
+2. Via CMake:
+```
+# old school
+mkdir -p build && cd build
+cmake .. -DGPIODWRAP_DISABLE_SIGNALS=ON
+make or make -j4
+
+# Directly in the project directory:
+cmake -B build -DGPIODWRAP_DISABLE_SIGNALS=ON
+cmake --build build
+```
+
+3. Direct GCC/Clang Invocation:
+```
+g++ -std=c++17 -DGPIODWRAP_NO_SIGNALS main.cpp -o app -lgpiod
+```
+
 ---
+
 
 ## 📄 License
 

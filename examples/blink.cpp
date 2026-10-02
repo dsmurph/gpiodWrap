@@ -26,7 +26,7 @@
 
 gpiodWrap gpio;
 
-constexpr int led = 27;
+constexpr int led = 17;
 
 
 int main() {

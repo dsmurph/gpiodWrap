@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(WebPi VERSION 1.0 LANGUAGES CXX)
+project(gpiodWarp VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,8 @@ else()
 set(GPIODWRAP "${PROJECT_SOURCE_DIR}")
 set(GPIODWRAP_BIN "${GPIODWRAP}/bin")
 
+option(GPIODWRAP_DISABLE_SIGNALS "Disable built-in signal handling and watchdog thread" OFF)
+
 add_library(gpiodWrap INTERFACE)
 
 target_sources(gpiodWrap
@@ -22,6 +24,10 @@ target_sources(gpiodWrap
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     FILES gpiodWrap.hpp
 )
+
+if(GPIODWRAP_DISABLE_SIGNALS)
+    target_compile_definitions(gpiodWrap INTERFACE GPIODWRAP_NO_SIGNALS)
+endif()
 
 add_subdirectory(examples)
 

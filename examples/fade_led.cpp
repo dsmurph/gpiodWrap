@@ -26,7 +26,7 @@
 
 gpiodWrap gpio;
 
-constexpr int ledPin = 27;
+constexpr int ledPin = 17;
 
 int fade_min = 2;
 int fade_max = 100;

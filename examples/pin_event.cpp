@@ -27,7 +27,7 @@
 
 gpiodWrap gpio;
 
-constexpr int button = 17;
+constexpr int button = 27;
 
 int main() {
 

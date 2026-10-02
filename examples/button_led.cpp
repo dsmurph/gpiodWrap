@@ -27,8 +27,8 @@
 
 gpiodWrap gpio;
 
-constexpr int button = 17;
-constexpr int led = 27;
+constexpr int button = 27;
+constexpr int led = 17;
 
 bool change = false;
 
