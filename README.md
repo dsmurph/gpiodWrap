@@ -70,7 +70,7 @@ Instead of complex gpiod structures, this wrapper provides easy functions like:
       <td>Configured and registered PIN.</td>
     </tr>
     <tr>
-      <td><code>setPin(pin)</code></td>
+      <td><code>setPin(pin, HIGH/LOW)</code></td>
       <td>Sets pin high/low.</td>
     </tr>
     <tr>
