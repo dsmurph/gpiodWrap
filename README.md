@@ -207,11 +207,11 @@ Perfect for hobbyists, students, and projects where you just want GPIO control w
 | C++         | ≥ C++17 |
 | CMake       | optional for building |
 
-Install libgpiod (Debian / Raspberry Pi OS):
+Install libgpiod build-essential cmake(Debian / Raspberry Pi OS):
 
 ```bash
 sudo apt update
-sudo apt install libgpiod-dev
+sudo apt install -y libgpiod-dev build-essential cmake
 
 gpioinfo -v
 ```
