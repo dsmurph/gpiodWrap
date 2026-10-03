@@ -14,7 +14,7 @@
  * @date 01.10.2026
  * @license MIT
  * @Copyright (c) 2025-2026 <dev@raspino.org>
- * gpiodWrap is part of the Raspino-Project.
+ * gpiodWrap is a part of the Raspino-Project.
  *
  * GitHub: https://github.com/dsmurph/gpiodWrap
  */
