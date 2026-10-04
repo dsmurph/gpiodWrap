@@ -1,5 +1,5 @@
 /**
- * @class gpiodWrap.hpp
+ * @class-file gpiodWrap.hpp
  * @brief Lightweight C++ wrapper for libgpiod GPIO access.
  *
  * Simplifies GPIO input/output handling on Linux systems using libgpiod.
@@ -8,16 +8,33 @@
  * Requires:
  *  - libgpiod (version 2.x recommended)
  *
- *
  * @author Kay Donau
  * @version 1.2.2
  * @date 01.10.2026
- * @license MIT
- * @Copyright (c) 2025-2026 <dev@raspino.org>
- * gpiodWrap is a part of the Raspino-Project.
  *
- * GitHub: https://github.com/dsmurph/gpiodWrap
+ * @github https://github.com/dsmurph/gpiodWrap
+ *
+ * gpiodWrap is a part of the Raspino-Project <https://raspino.org>
+ * @copyright Copyright (c) 2025-2026 Raspino-Projekt <dev@raspino.org>
+ * @license GNU General Public License v3.0 (GPL-3.0-or-later)
+ *
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://gnu.org>.
+ * 
+ * Raspino (TM) is a trademark of the Raspino-Project.
  */
+
 
 #pragma once
 
