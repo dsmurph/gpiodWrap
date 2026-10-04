@@ -1,3 +1,6 @@
+Copyright (C) 2026 Raspino-Projekt <dev@raspino.org>
+
+                    
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
