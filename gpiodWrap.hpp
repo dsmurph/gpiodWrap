@@ -33,6 +33,7 @@
  * along with this program. If not, see <https://gnu.org>.
  * 
  * Raspino (TM) is a trademark of the Raspino-Project.
+ * https://github.com/dsmurph/raspino/blob/main/TRADEMARK-EN.md
  */
 
 
