@@ -520,8 +520,8 @@ g++ -std=c++17 -DGPIODWRAP_NO_SIGNALS main.cpp -o app -lgpiod
 
 ## 📄 License
 
-Copyright (C) 2026 Raspino-Projekt <dev@raspino.org>
-GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+Copyright (C) 2026 Raspino-Projekt <dev@raspino.org>  
+GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007  
 You are free to use, modify, and distribute this project under the terms of the GPLv3.
 
 ---
