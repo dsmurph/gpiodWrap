@@ -456,8 +456,6 @@ public:
         auto it = pins.find(pin);
         if (it != pins.end()) {
             if (it->second.request) {
-                if (it->second.direction == PinDirection::OUTPUT) safeStatePin(it->second.request, pin);
-
                 gpiod_line_request_release(it->second.request);
                 it->second.request = nullptr;
             }
