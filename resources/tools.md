@@ -1,9 +1,8 @@
-QuickEditor
-Termius
-GitSync
-Grafika
+QuickEditor  
+Termius  
+GitSync  
+Grafika  
 
-
-Notepad++ (NppFTP, Autosave, ...usw)
-WinSCP
+Notepad++ (NppFTP, Autosave, ...usw)  
+WinSCP  
 Inkscape
